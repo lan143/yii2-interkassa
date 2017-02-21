@@ -3,6 +3,7 @@ namespace lan143\interkassa;
 
 use Yii;
 use yii\base\Exception;
+use yii\base\InvalidConfigException;
 use yii\httpclient\Client;
 
 class Api
@@ -93,6 +94,9 @@ class Api
 
     private function request($http_method, $method, $lk_api_account_id = null, $data = [])
     {
+        if (Yii::$app->interkassa === null)
+            throw new InvalidConfigException("Interkassa component not inited.");
+
         $client = new Client();
         $client->setMethod($http_method)
             ->setUrl(self::URL . $method);
