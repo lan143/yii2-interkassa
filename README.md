@@ -126,4 +126,70 @@ class InterkassaController extends Controller
         return $model;
     }
 }
+```
 
+Example withdraw:
+```php
+class Withdraw
+{
+    protected $purse_name = 'My Purse Name';
+
+    public function process($withdraw)
+    {
+        $api = new \lan143\interkassa\Api;
+
+        $purses = $api->getPurses();
+        $purse = null;
+
+        foreach ($purses as $_purse)
+        {
+            if ($_purse->name == $this->purse_name)
+            {
+                $purse = $_purse;
+                break;
+            }
+        }
+
+        if ($purse === null)
+            throw new \Exception("Purse not found");
+
+        if ($purse->balance < $withdraw->amount)
+            throw new \Exception("Balance in purse ({$purse->balance}) less withdraw amount ({$withdraw->amount}).");
+
+        $payways = $api->getOutputPayways();
+        $payway = null;
+
+        foreach ($payways as $_payway)
+        {
+            if ($_payway->als == $withdraw->payway_name) // for example: webmoney_webmoney_transfer_wmz
+            {
+                $payway = $_payway;
+                break;
+            }
+        }
+
+        if ($payway === null)
+            throw new \Exception("Payway not found");
+
+        $details = [
+            'purse' => $withdraw->purse // for example: Z1234567890
+        ];
+
+        $result = self::createWithdraw(
+            $withdraw->amount,
+            $payway->id,
+            $details,
+            $purse->id,
+            'psPayeeAmount',
+            'process',
+            $id
+        );
+
+        if ($result->{'@resultCode'} == 0)
+        {
+            return $result->transaction;
+        }
+        else
+            throw new \Exception($result->{'@resultMessage'});
+    }
+}
