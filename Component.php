@@ -1,6 +1,7 @@
 <?php
 namespace lan143\interkassa;
 
+use Yii;
 use yii\base\InvalidConfigException;
 
 class Component extends \yii\base\Component
@@ -11,6 +12,8 @@ class Component extends \yii\base\Component
     public $sign_algo = 'md5';
     public $api_user_id;
     public $api_user_key;
+
+    const URL = 'https://sci.interkassa.com/';
 
     public function init()
     {
@@ -46,5 +49,15 @@ class Component extends \yii\base\Component
             : $this->secret_key);
 
         return base64_encode(hash($this->sign_algo, implode(":", $pairs), true));
+    }
+
+    public function payment($params)
+    {
+        if (!is_array($params))
+            throw new \InvalidArgumentException('Params must be array');
+
+        $params['ik_co_id'] = $this->co_id;
+
+        return Yii::$app->response->redirect(self::URL . '?' .http_build_query($params));
     }
 }
