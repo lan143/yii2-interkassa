@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/lan143/yii2-interkassa.svg?branch=master)](https://travis-ci.org/lan143/yii2-interkassa)
+[![Latest Stable Version](https://poser.pugx.org/lan143/yii2-interkassa/v/stable)](https://packagist.org/packages/lan143/yii2-interkassa)[![License](https://poser.pugx.org/lan143/yii2-interkassa/license)](https://packagist.org/packages/lan143/yii2-interkassa)[![Build Status](https://travis-ci.org/lan143/yii2-interkassa.svg?branch=master)](https://travis-ci.org/lan143/yii2-interkassa)
 
 Yii2 Interkassa
 ===============
