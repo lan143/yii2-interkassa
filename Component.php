@@ -1,6 +1,9 @@
 <?php
 namespace lan143\interkassa;
 
+use lan143\interkassa\exceptions\HttpException;
+use lan143\interkassa\exceptions\InterkassaException;
+use lan143\interkassa\exceptions\WithdrawException;
 use Yii;
 use yii\base\InvalidConfigException;
 
@@ -12,6 +15,7 @@ class Component extends \yii\base\Component
     public $sign_algo = 'md5';
     public $api_user_id;
     public $api_user_key;
+    public $api;
 
     const URL = 'https://sci.interkassa.com/';
 
@@ -24,9 +28,11 @@ class Component extends \yii\base\Component
 
         if (!in_array($this->sign_algo, ['md5', 'sha256']))
             throw new InvalidConfigException("Invalid sign algoritm.");
+
+        $this->api = new Api();
     }
 
-    public function generateSign($params)
+    public function generateSign(array $params)
     {
         $pairs = [];
 
@@ -51,7 +57,7 @@ class Component extends \yii\base\Component
         return base64_encode(hash($this->sign_algo, implode(":", $pairs), true));
     }
 
-    public function payment($params)
+    public function payment(array $params)
     {
         if (!is_array($params))
             throw new \InvalidArgumentException('Params must be array');
@@ -59,5 +65,74 @@ class Component extends \yii\base\Component
         $params['ik_co_id'] = $this->co_id;
 
         return Yii::$app->response->redirect(self::URL . '?' .http_build_query($params));
+    }
+
+    /**
+     * @param int $id
+     * @param string $purse_name
+     * @param string $payway_name
+     * @param array $details
+     * @param float $amount
+     * @param string $calcKey Allowed: (ikPayerPrice, psPayeeAmount)
+     * @param string $action Allowed: (calc, process)
+     * @return mixed
+     * @throws WithdrawException
+     */
+    public function withdraw(int $id, string $purse_name, string $payway_name, array $details, float $amount,
+                             string $calcKey = 'ikPayerPrice', string $action = 'calc')
+    {
+        $purses = $this->api->getPurses();
+        $purse = null;
+
+        foreach ($purses as $_purse)
+        {
+            if ($_purse->name == $purse_name)
+            {
+                $purse = $_purse;
+                break;
+            }
+        }
+
+        if ($purse === null)
+            throw new WithdrawException("Purse not found");
+
+        if ($purse->balance < $amount)
+            throw new WithdrawException("Balance in purse ({$purse->balance}) less withdraw amount ({$amount}).");
+
+        $payways = $this->api->getOutputPayways();
+        $payway = null;
+
+        foreach ($payways as $_payway)
+        {
+            if ($_payway->als == $payway_name)
+            {
+                $payway = $_payway;
+                break;
+            }
+        }
+
+        if ($payway === null)
+            throw new WithdrawException("Payway not found");
+
+        try {
+            $result = $this->api->createWithdraw(
+                $amount,
+                $payway->id,
+                $details,
+                $purse->id,
+                $calcKey,
+                $action,
+                $id
+            );
+
+            if ($result->{'@resultCode'} == 0)
+                return $result->transaction;
+            else
+                throw new WithdrawException($result->{'@resultMessage'});
+        } catch (HttpException $e) {
+            throw new WithdrawException('Http exception: ' . $e->getMessage());
+        } catch (InterkassaException $e) {
+            throw new WithdrawException('Interkassa exception: ' . $e->getMessage());
+        }
     }
 }

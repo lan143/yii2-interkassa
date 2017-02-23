@@ -1,6 +1,7 @@
 Yii2 Interkassa
 ===============
 Extension for integration Interkassa in yii2 project. WIP.
+[![Build Status](https://travis-ci.org/lan143/yii2-interkassa.svg?branch=master)](https://travis-ci.org/lan143/yii2-interkassa)
 
 Installation
 ------------
@@ -134,62 +135,25 @@ class Withdraw
 {
     protected $purse_name = 'My Purse Name';
 
-    public function process($withdraw)
+    public function process($id)
     {
-        $api = new \lan143\interkassa\Api;
-
-        $purses = $api->getPurses();
-        $purse = null;
-
-        foreach ($purses as $_purse)
-        {
-            if ($_purse->name == $this->purse_name)
-            {
-                $purse = $_purse;
-                break;
-            }
+        $withdraw = Withdraw::findOne($id);
+        
+        if ($withdraw === null)
+            throw new BadRequestHttpException;
+    
+        try {
+            $result = Yii::$app->interkassa->withdraw(
+                $withdraw->id,
+                $this->purse_name,
+                $withdraw->payway_name,
+                ['purse' => $withdraw->purse],
+                $withdraw->amount,
+                'psPayeeAmount',
+                'process'
+            );
+        } catch (WithdrawException $e) {
+            return $e->getMessage();
         }
-
-        if ($purse === null)
-            throw new \Exception("Purse not found");
-
-        if ($purse->balance < $withdraw->amount)
-            throw new \Exception("Balance in purse ({$purse->balance}) less withdraw amount ({$withdraw->amount}).");
-
-        $payways = $api->getOutputPayways();
-        $payway = null;
-
-        foreach ($payways as $_payway)
-        {
-            if ($_payway->als == $withdraw->payway_name) // for example: webmoney_webmoney_transfer_wmz
-            {
-                $payway = $_payway;
-                break;
-            }
-        }
-
-        if ($payway === null)
-            throw new \Exception("Payway not found");
-
-        $details = [
-            'purse' => $withdraw->purse // for example: Z1234567890
-        ];
-
-        $result = self::createWithdraw(
-            $withdraw->amount,
-            $payway->id,
-            $details,
-            $purse->id,
-            'psPayeeAmount',
-            'process',
-            $id
-        );
-
-        if ($result->{'@resultCode'} == 0)
-        {
-            return $result->transaction;
-        }
-        else
-            throw new \Exception($result->{'@resultMessage'});
     }
 }
