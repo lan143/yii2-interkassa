@@ -1,6 +1,8 @@
 <?php
 namespace lan143\interkassa;
 
+use lan143\interkassa\exceptions\HttpException;
+use lan143\interkassa\exceptions\InterkassaException;
 use Yii;
 use yii\base\Exception;
 use yii\base\InvalidConfigException;
@@ -92,35 +94,36 @@ class Api
         }
     }
 
-    private function request($http_method, $method, $lk_api_account_id = null, $data = [])
+    public function request($http_method, $method, $lk_api_account_id = null, $data = [])
     {
         if (Yii::$app->interkassa === null)
             throw new InvalidConfigException("Interkassa component not inited.");
 
         $client = new Client();
-        $client->setMethod($http_method)
+        $request = $client->createRequest()
+            ->setMethod($http_method)
             ->setUrl(self::URL . $method);
 
         if (count($data) > 0)
-            $client->setData($data);
+            $request->setData($data);
 
         if ($lk_api_account_id !== null)
-            $client->addHeaders(['Ik-Api-Account-Id' => $lk_api_account_id]);
+            $request->addHeaders(['Ik-Api-Account-Id' => $lk_api_account_id]);
 
-        $client->addHeaders(['Authorization' => 'Basic ' . base64_encode(Yii::$app->interkassa->user_id . ':' . Yii::$app->interkassa->key)]);
+        $request->addHeaders(['Authorization' => 'Basic ' . base64_encode(Yii::$app->interkassa->api_user_id . ':' . Yii::$app->interkassa->api_user_key)]);
 
-        $response = $client->send();
+        $response = $request->send();
 
         if ($response->isOk)
         {
             if ($response->data['code'] == 0)
                 return $response->data['data'] ?? null;
             else
-                throw new Exception($response->data['code'] . ': ' . $response->data['message']);
+                throw new InterkassaException($response->data['code'] . ': ' . $response->data['message']);
         }
         else
         {
-            throw new Exception($response->statusCode);
+            throw new HttpException($response->statusCode);
         }
     }
 
