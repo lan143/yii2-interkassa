@@ -1,7 +1,8 @@
+[![Build Status](https://travis-ci.org/lan143/yii2-interkassa.svg?branch=master)](https://travis-ci.org/lan143/yii2-interkassa)
+
 Yii2 Interkassa
 ===============
 Extension for integration Interkassa in yii2 project. WIP.
-[![Build Status](https://travis-ci.org/lan143/yii2-interkassa.svg?branch=master)](https://travis-ci.org/lan143/yii2-interkassa)
 
 Installation
 ------------
